@@ -1,0 +1,323 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,user-scalable=no">
+<title>日本語チャレンジ！</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Fredoka+One&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent;}
+body{font-family:'Noto Sans JP',sans-serif;min-height:100vh;display:flex;flex-direction:column;align-items:center;}
+body.g1{background:linear-gradient(160deg,#FFEBEE,#FFCDD2);}
+body.g2{background:linear-gradient(160deg,#E3F2FD,#BBDEFB);}
+body.g3{background:linear-gradient(160deg,#E8F5E9,#C8E6C9);}
+body.g4{background:linear-gradient(160deg,#FFF3E0,#FFE0B2);}
+body.g5{background:linear-gradient(160deg,#F3E5F5,#E1BEE7);}
+body.g6{background:linear-gradient(160deg,#E0F7FA,#B2EBF2);}
+header{width:100%;padding:16px;text-align:center;font-family:'Fredoka One',cursive;font-size:1.5rem;color:white;}
+.g1 header{background:#E53935;box-shadow:0 3px 0 #B71C1C;}
+.g2 header{background:#1E88E5;box-shadow:0 3px 0 #0D47A1;}
+.g3 header{background:#43A047;box-shadow:0 3px 0 #1B5E20;}
+.g4 header{background:#FB8C00;box-shadow:0 3px 0 #E65100;}
+.g5 header{background:#8E24AA;box-shadow:0 3px 0 #4A148C;}
+.g6 header{background:#00ACC1;box-shadow:0 3px 0 #006064;}
+header small{display:block;font-family:'Noto Sans JP',sans-serif;font-size:.75rem;font-weight:400;opacity:.9;margin-top:2px;}
+
+#screen-wait{display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:32px;text-align:center;gap:16px;width:100%;}
+#screen-play{display:none;flex-direction:column;align-items:center;flex:1;padding:24px 16px;gap:20px;width:100%;}
+
+.w-icon{font-size:4rem;}
+.w-text{font-size:1.1rem;font-weight:700;color:#555;}
+.w-sub{font-size:.85rem;color:#888;}
+
+#mic-btn{width:160px;height:160px;border-radius:50%;border:none;display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:3.5rem;box-shadow:0 8px 0 rgba(0,0,0,.2);color:white;cursor:pointer;transition:transform .1s,box-shadow .1s;}
+#mic-btn:active{transform:scale(.94) translateY(4px);box-shadow:0 4px 0 rgba(0,0,0,.2);}
+#mic-btn.on{animation:mpulse 1.2s ease-in-out infinite;}
+@keyframes mpulse{0%,100%{box-shadow:0 8px 0 rgba(0,0,0,.2),0 0 0 0 rgba(255,255,255,.5)}60%{box-shadow:0 8px 0 rgba(0,0,0,.2),0 0 0 22px rgba(255,255,255,0)}}
+.g1 #mic-btn{background:#E53935;}
+.g2 #mic-btn{background:#1E88E5;}
+.g3 #mic-btn{background:#43A047;}
+.g4 #mic-btn{background:#FB8C00;}
+.g5 #mic-btn{background:#8E24AA;}
+.g6 #mic-btn{background:#00ACC1;}
+#mic-label{font-size:.82rem;font-weight:700;color:white;margin-top:4px;}
+
+#status-box{width:100%;max-width:340px;background:rgba(255,255,255,.82);border-radius:20px;padding:16px;text-align:center;}
+#heard{font-size:1.6rem;font-weight:700;color:#333;min-height:2rem;}
+#smsg{font-size:.85rem;color:#888;margin-top:6px;}
+#smsg.ok{color:#2E7D32;font-weight:700;}
+#smsg.err{color:#E53935;}
+
+#result-overlay{position:fixed;inset:0;background:rgba(0,0,0,.4);display:none;align-items:center;justify-content:center;z-index:99;}
+#result-overlay.show{display:flex;}
+#result-card{background:white;border-radius:28px;padding:28px 40px;text-align:center;}
+#r-icon{font-size:3.5rem;}
+#r-text{font-size:1.4rem;font-weight:700;margin-top:8px;color:#333;}
+#r-pts{font-size:1rem;color:#888;margin-top:4px;}
+
+#conn-bar{position:fixed;bottom:0;left:0;right:0;padding:8px;text-align:center;font-size:.75rem;font-weight:700;}
+.connected{background:#E8F5E9;color:#2E7D32;}
+.disconnected{background:#FFEBEE;color:#E53935;}
+</style>
+</head>
+<body>
+<header>🌸 日本語チャレンジ！<small id="glabel">連線中...</small></header>
+
+<div id="screen-wait">
+  <div class="w-icon">⏳</div>
+  <div class="w-text">等待老師出題中...</div>
+  <div class="w-sub">題目出來後會自動開始聆聽！<br>只要直接說日文就好！</div>
+</div>
+
+<div id="screen-play">
+  <div id="status-box">
+    <div id="heard">—</div>
+    <div id="smsg">正在聆聽，請直接說日文！</div>
+  </div>
+  <button id="mic-btn" onclick="toggleMic()">
+    🎙️<span id="mic-label">聆聽中</span>
+  </button>
+  <div style="font-size:.8rem;color:#777;text-align:center;line-height:1.6;">
+    直接說出日文即可！<br>不需要按任何按鈕。
+  </div>
+</div>
+
+<div id="result-overlay">
+  <div id="result-card">
+    <div id="r-icon">🎉</div>
+    <div id="r-text">答對了！</div>
+    <div id="r-pts">+2 分</div>
+  </div>
+</div>
+
+<div id="conn-bar" class="disconnected">連線中...</div>
+
+<script>
+const params  = new URLSearchParams(location.search);
+const groupId = parseInt(params.get('group')) || 1;
+document.body.classList.add('g' + groupId);
+const GNAMES = ['','紅隊','藍隊','綠隊','橙隊','紫隊','青隊'];
+document.getElementById('glabel').textContent = GNAMES[groupId] || '第'+groupId+'組';
+
+// ── 關鍵字對照 ──
+const KANA_MAP = {
+  stand:   ['たって','たっ','立って','立て','立つ'],
+  sit:     ['すわって','すわ','座って','座れ','座る'],
+  bow:     ['おじぎ','お辞儀','辞儀'],
+  wave:    ['ふって','ふり','振って','振れ'],
+  laugh:   ['わらって','わら','笑って','笑え','笑う'],
+  cry:     ['ないて','なき','泣いて','泣け','泣く'],
+  jump:    ['ジャンプ','じゃんぷ'],
+  spin:    ['まわって','まわ','回って','回れ','回る'],
+  clap:    ['てをたたいて','たたいて','手を叩いて','叩いて','拍手'],
+  surprise:['びっくり','ビックリ','驚'],
+  angry:   ['おこって','おこ','怒って','怒れ','怒る'],
+  dance:   ['ダンス','だんす','踊って','踊れ','踊る'],
+  sleep:   ['ねて','ねろ','ねむ','寝て','寝ろ','眠れ'],
+  excited: ['やった','やっ','やったー'],
+};
+function match(text){
+  const t = text.toLowerCase().replace(/\s/g,'');
+  for(const [action,keys] of Object.entries(KANA_MAP))
+    for(const k of keys)
+      if(t.includes(k.toLowerCase())) return action;
+  return null;
+}
+
+// ── 狀態（用兩個獨立變數，絕不混用） ──
+let questionAction = null;   // 目前題目的 action，null = 沒在出題
+let alreadyScored  = false;  // 這題我們組有沒有已經加過分
+let micRunning     = false;  // recognition.start() 有沒有在跑
+let lastSent       = 0;      // 防重複送出
+
+// ── DOM ──
+const sw    = document.getElementById('screen-wait');
+const sp    = document.getElementById('screen-play');
+const mb    = document.getElementById('mic-btn');
+const ml    = document.getElementById('mic-label');
+const heard = document.getElementById('heard');
+const smsg  = document.getElementById('smsg');
+const rOvl  = document.getElementById('result-overlay');
+const cBar  = document.getElementById('conn-bar');
+
+function goWait(){
+  sw.style.display = 'flex';
+  sp.style.display = 'none';
+}
+function goPlay(){
+  sw.style.display = 'none';
+  sp.style.display = 'flex';
+  heard.textContent = '—';
+  smsg.textContent  = '正在聆聽，請直接說日文！';
+  smsg.className    = '';
+}
+
+// ── 語音辨識 ──
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+let rec = null;
+
+if(SR){
+  rec = new SR();
+  rec.lang = 'ja-JP';
+  rec.continuous = true;
+  rec.interimResults = true;
+
+  rec.onstart = ()=>{
+    micRunning = true;
+    mb.classList.add('on');
+    ml.textContent = '聆聽中';
+  };
+
+  rec.onresult = e=>{
+    if(!questionAction) return;       // 沒在出題就忽略
+    if(alreadyScored) return;         // 這題已加分就忽略
+
+    let interim='', final='';
+    for(let i=e.resultIndex;i<e.results.length;i++){
+      if(e.results[i].isFinal) final += e.results[i][0].transcript;
+      else interim += e.results[i][0].transcript;
+    }
+    const text = final || interim;
+    if(text) heard.textContent = text;
+
+    const action = match(text);
+    if(action && action === questionAction){
+      const now = Date.now();
+      if(now - lastSent > 2000){      // 2 秒冷卻，防止重複送
+        lastSent = now;
+        send({ type:'answer', action, groupId });
+        smsg.textContent = '✔ 送出！';
+        smsg.className = 'ok';
+      }
+    }
+  };
+
+  rec.onend = ()=>{
+    micRunning = false;
+    // 如果題目還在進行，自動重啟
+    if(questionAction){
+      setTimeout(()=>{
+        if(questionAction && !micRunning) startRec();
+      }, 400);
+    } else {
+      mb.classList.remove('on');
+      ml.textContent = '按我說話';
+    }
+  };
+
+  rec.onerror = e=>{
+    micRunning = false;
+    if(e.error === 'no-speech'){
+      // 沒聲音，靜默重啟
+      if(questionAction) setTimeout(()=>{ if(questionAction && !micRunning) startRec(); }, 400);
+      return;
+    }
+    if(e.error === 'not-allowed'){
+      mb.classList.remove('on');
+      ml.textContent = '需要權限';
+      smsg.textContent = '❌ 請允許麥克風，然後重新整理';
+      smsg.className = 'err';
+    }
+  };
+}
+
+function startRec(){
+  if(!rec || micRunning) return;
+  try{ rec.start(); }catch(e){}
+}
+function stopRec(){
+  if(!rec) return;
+  micRunning = false;
+  try{ rec.stop(); }catch(e){}
+  mb.classList.remove('on');
+  ml.textContent = '按我說話';
+}
+function toggleMic(){
+  if(micRunning) stopRec();
+  else if(questionAction) startRec();
+}
+
+// ── WebSocket ──
+let ws = null;
+function send(obj){
+  if(ws && ws.readyState===1) ws.send(JSON.stringify(obj));
+}
+function connect(){
+  const proto = location.protocol==='https:'?'wss://':'ws://';
+  ws = new WebSocket(`${proto}${location.host}/ws-remote?group=${groupId}`);
+
+  ws.onopen = ()=>{
+    cBar.textContent = '✅ 已連線到教室！';
+    cBar.className = 'connected';
+  };
+
+  ws.onmessage = e=>{
+    const msg = JSON.parse(e.data);
+
+    // 初始狀態（連線時收到）
+    if(msg.type === 'init'){
+      if(msg.game.question){
+        questionAction = msg.game.question.action;
+        alreadyScored  = msg.game.answered.includes(groupId);
+        goPlay();
+        if(!alreadyScored) startRec();
+      } else {
+        goWait();
+      }
+    }
+
+    // 老師出新題目
+    if(msg.type === 'question'){
+      questionAction = msg.action;
+      alreadyScored  = false;
+      goPlay();
+      startRec();
+    }
+
+    // 題目結束
+    if(msg.type === 'question_end'){
+      questionAction = null;
+      alreadyScored  = false;
+      stopRec();
+      goWait();
+    }
+
+    // 遊戲重置
+    if(msg.type === 'game_reset'){
+      questionAction = null;
+      alreadyScored  = false;
+      stopRec();
+      goWait();
+    }
+
+    // 答對通知（只有這台設備會收到）
+    if(msg.type === 'correct_ack'){
+      alreadyScored = true;
+      const icon = msg.rank===1?'🥇':msg.rank===2?'🥈':'✅';
+      const text = msg.rank===1?'第一個答對！':msg.rank===2?'第二個！':'答對了！';
+      document.getElementById('r-icon').textContent = icon;
+      document.getElementById('r-text').textContent = text;
+      document.getElementById('r-pts').textContent  = `+${msg.pts} 分！`;
+      rOvl.classList.add('show');
+      setTimeout(()=> rOvl.classList.remove('show'), 3000);
+      smsg.textContent = '✅ 本題已加分！等待下一題...';
+      smsg.className = 'ok';
+    }
+
+    // 分數更新（全場廣播）
+    if(msg.type === 'scores'){
+      // 學生端不需要顯示，可忽略
+    }
+  };
+
+  ws.onclose = ()=>{
+    cBar.textContent = '⚠️ 斷線，重連中...';
+    cBar.className = 'disconnected';
+    setTimeout(connect, 2000);
+  };
+}
+
+connect();
+</script>
+</body>
+</html>

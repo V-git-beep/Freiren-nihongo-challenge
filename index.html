@@ -1,0 +1,281 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<title>日文體驗課 — 主畫面</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700;900&family=Fredoka+One&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans JP',sans-serif;height:100vh;overflow:hidden;display:flex;flex-direction:column;}
+
+/* 背景 */
+#bg{position:fixed;inset:0;background:url('background.png') center center/cover no-repeat;z-index:0;}
+#bg-overlay{position:fixed;inset:0;background:rgba(0,0,0,.08);z-index:1;}
+
+/* 版面 */
+#layout{position:relative;z-index:10;display:flex;height:100vh;}
+#left{width:200px;padding:12px 8px;display:flex;flex-direction:column;gap:10px;flex-shrink:0;}
+#center{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:flex-end;padding-bottom:40px;}
+#right{width:200px;padding:12px 8px;flex-shrink:0;}
+
+/* HUD */
+#hud{position:fixed;top:10px;left:50%;transform:translateX(-50%);display:flex;gap:8px;z-index:20;}
+.hud-pill{background:rgba(255,255,255,.88);border-radius:20px;padding:5px 14px;font-size:13px;font-weight:700;color:#2c5f2e;backdrop-filter:blur(6px);box-shadow:0 2px 8px rgba(0,0,0,.15);}
+
+/* 排行榜 */
+.score-panel{background:rgba(255,255,255,.85);border-radius:16px;padding:12px;backdrop-filter:blur(8px);box-shadow:0 4px 16px rgba(0,0,0,.15);}
+.score-title{font-size:.75rem;font-weight:700;color:#555;text-align:center;margin-bottom:8px;letter-spacing:.06em;}
+.score-row{display:flex;align-items:center;gap:6px;padding:6px 8px;border-radius:10px;margin-bottom:4px;transition:all .3s;}
+.score-row.bump{animation:bump .4s ease;}
+@keyframes bump{0%,100%{transform:scale(1)}50%{transform:scale(1.07)}}
+.s-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.s-name{font-size:.85rem;font-weight:700;flex:1;}
+.s-num{font-family:'Fredoka One',cursive;font-size:1.3rem;}
+.s-rank{font-size:.8rem;margin-left:2px;}
+
+/* 題目框 */
+#question-box{background:rgba(255,255,255,.92);border-radius:18px;padding:10px 22px;text-align:center;margin-bottom:14px;box-shadow:0 4px 12px rgba(0,0,0,.15);display:none;max-width:420px;}
+#question-box.show{display:block;animation:popIn .4s cubic-bezier(.34,1.56,.64,1);}
+@keyframes popIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+#q-label{font-size:.8rem;color:#888;}
+#q-hint{font-size:1.1rem;font-weight:700;color:#2c5f2e;margin-top:3px;}
+
+/* 對話泡泡 */
+#bubble{background:white;border:3px solid #7cb87e;border-radius:20px;padding:8px 22px;font-family:'Fredoka One',cursive;font-size:1.6rem;color:#2c5f2e;margin-bottom:12px;position:relative;opacity:0;transform:scale(.8);transition:opacity .3s,transform .3s;text-align:center;box-shadow:0 4px 0 #7cb87e;max-width:400px;}
+#bubble.show{opacity:1;transform:scale(1);}
+#bubble::after{content:'';position:absolute;bottom:-16px;left:50%;transform:translateX(-50%);border:8px solid transparent;border-top-color:#7cb87e;}
+#bubble::before{content:'';position:absolute;bottom:-10px;left:50%;transform:translateX(-50%);border:7px solid transparent;border-top-color:white;z-index:1;}
+#bubble-sub{font-size:.95rem;color:#3a7a3d;font-family:'Noto Sans JP',sans-serif;font-weight:400;display:block;margin-top:2px;}
+
+/* 答對閃光 */
+#answer-flash{position:fixed;inset:0;z-index:50;display:flex;align-items:center;justify-content:center;pointer-events:none;opacity:0;transition:opacity .3s;}
+#answer-flash.show{opacity:1;}
+#flash-card{background:white;border-radius:28px;padding:18px 44px;text-align:center;box-shadow:0 8px 40px rgba(0,0,0,.2);}
+#flash-name{font-size:2rem;font-weight:900;}
+#flash-pts{font-size:1.1rem;color:#666;margin-top:4px;}
+
+/* 人物舞台 */
+#char-stage{position:relative;width:320px;height:380px;display:flex;align-items:flex-end;justify-content:center;}
+#char-img{width:auto;height:340px;object-fit:contain;transform-origin:bottom center;transition:opacity .2s;filter:drop-shadow(0 8px 16px rgba(0,0,0,.3));}
+
+/* 動畫 */
+#char-img.anim-bounce{animation:bounce .5s ease;}
+@keyframes bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-40px)}60%{transform:translateY(-20px)}}
+#char-img.anim-shake{animation:shake .3s ease 0s 3;}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+#char-img.anim-spin{animation:spinAnim .7s ease;}
+@keyframes spinAnim{0%{transform:rotate(0) scale(1)}50%{transform:rotate(200deg) scale(1.1)}100%{transform:rotate(360deg) scale(1)}}
+#char-img.anim-float{animation:float 2s ease-in-out infinite;}
+@keyframes float{0%,100%{transform:translateY(0)}50%{transform:translateY(-12px)}}
+#char-img.anim-sway{animation:sway 1.5s ease-in-out infinite;}
+@keyframes sway{0%,100%{transform:rotate(-4deg)}50%{transform:rotate(4deg)}}
+#char-img.anim-pulse{animation:pulse .25s ease infinite alternate;}
+@keyframes pulse{from{transform:scale(1)}to{transform:scale(1.06)}}
+#char-img.anim-tada{animation:tada .6s ease;}
+@keyframes tada{0%{transform:scale(1)}10%{transform:scale(.95) rotate(-3deg)}30%{transform:scale(1.05) rotate(3deg)}50%{transform:scale(1.05) rotate(-3deg)}70%{transform:scale(1.05) rotate(3deg)}100%{transform:scale(1) rotate(0)}}
+#char-img.anim-bow{animation:bowAnim .6s ease forwards;}
+@keyframes bowAnim{0%{transform:rotate(0)}40%{transform:rotate(20deg) translateY(8px)}70%{transform:rotate(20deg) translateY(8px)}100%{transform:rotate(0)}}
+
+/* 粒子 */
+.particle{position:fixed;pointer-events:none;z-index:40;font-size:1.6rem;animation:pFly 1.2s ease forwards;}
+@keyframes pFly{0%{opacity:1;transform:translateY(0) scale(1)}100%{opacity:0;transform:translateY(-120px) scale(.4)}}
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="bg-overlay"></div>
+
+<div id="hud">
+  <div class="hud-pill">🌸 日文競賽</div>
+  <div class="hud-pill">👥 <span id="conn-count">0</span> 人連線</div>
+</div>
+
+<div id="answer-flash">
+  <div id="flash-card">
+    <div id="flash-name"></div>
+    <div id="flash-pts"></div>
+  </div>
+</div>
+
+<div id="layout">
+  <div id="left">
+    <div class="score-panel">
+      <div class="score-title">🏆 排行榜</div>
+      <div id="score-list"></div>
+    </div>
+  </div>
+
+  <div id="center">
+    <div id="question-box">
+      <div id="q-label">🎯 題目</div>
+      <div id="q-hint"></div>
+    </div>
+    <div id="bubble"><span id="bubble-jp">こんにちは！</span><span id="bubble-sub">大家好！</span></div>
+    <div id="char-stage">
+      <img id="char-img" src="idle.png" alt="character">
+    </div>
+  </div>
+
+  <div id="right"></div>
+</div>
+
+<script>
+const charImg    = document.getElementById('char-img');
+const bubble     = document.getElementById('bubble');
+const bubbleJp   = document.getElementById('bubble-jp');
+const bubbleSub  = document.getElementById('bubble-sub');
+const scoreList  = document.getElementById('score-list');
+const qBox       = document.getElementById('question-box');
+const qHint      = document.getElementById('q-hint');
+const flash      = document.getElementById('answer-flash');
+const flashName  = document.getElementById('flash-name');
+const flashPts   = document.getElementById('flash-pts');
+const connCount  = document.getElementById('conn-count');
+
+// 每個動作對應的圖片和動畫
+const ACTION_MAP = {
+  idle:     { img:'idle.png',     anim:'anim-float',  jp:'',          zh:'' },
+  stand:    { img:'stand.png',    anim:'anim-float',  jp:'たって！',   zh:'立正！' },
+  sit:      { img:'sit.png',      anim:'',            jp:'すわって！', zh:'坐下！' },
+  bow:      { img:'bow.png',      anim:'anim-bow',    jp:'おじぎ！',   zh:'鞠躬！' },
+  wave:     { img:'wave.png',     anim:'anim-float',  jp:'ふって！',   zh:'揮手！' },
+  laugh:    { img:'laugh.png',    anim:'anim-pulse',  jp:'わらって！', zh:'哈哈哈！' },
+  cry:      { img:'cry.png',      anim:'anim-shake',  jp:'ないて！',   zh:'嗚嗚嗚...' },
+  jump:     { img:'jump.png',     anim:'anim-bounce', jp:'ジャンプ！', zh:'跳！' },
+  spin:     { img:'spin.png',     anim:'anim-spin',   jp:'まわって！', zh:'轉圈！' },
+  clap:     { img:'clap.png',     anim:'anim-tada',   jp:'てをたたいて！', zh:'拍手！' },
+  surprise: { img:'surprise.png', anim:'anim-shake',  jp:'びっくり！', zh:'嚇一跳！' },
+  angry:    { img:'angry.png',    anim:'anim-shake',  jp:'おこって！', zh:'生氣！' },
+  dance:    { img:'dance.png',    anim:'anim-sway',   jp:'ダンス！',   zh:'跳舞！' },
+  sleep:    { img:'sleep.png',    anim:'anim-float',  jp:'ねて！',     zh:'睡覺...' },
+  excited:  { img:'excited.png',  anim:'anim-bounce', jp:'やった！',   zh:'好興奮！' },
+};
+
+const PARTICLES = {
+  stand:['⭐','✨'], sit:[], bow:['✨','⭐'], wave:['👋'],
+  laugh:['😄','😆'], cry:['💧','😢'], jump:['💫','⭐'],
+  spin:['✨','🌟','💫'], clap:['👏','✨'], surprise:['❗','💥'],
+  angry:['💢'], dance:['🎵','✨','🎶'], sleep:['💤','🌙'],
+  excited:['🎉','⭐','✨','🎊'],
+};
+
+let animTimer = null;
+
+function doAction(action) {
+  const info = ACTION_MAP[action] || ACTION_MAP.idle;
+  // 切換圖片
+  charImg.style.opacity = '0';
+  setTimeout(() => {
+    charImg.src = info.img + '?v=' + Date.now();
+    charImg.className = '';
+    void charImg.offsetWidth;
+    if(info.anim) charImg.classList.add(info.anim);
+    charImg.style.opacity = '1';
+  }, 150);
+
+  // 泡泡
+  if(info.jp){
+    bubbleJp.textContent  = info.jp;
+    bubbleSub.textContent = info.zh;
+    bubble.classList.add('show');
+  }
+
+  // 粒子
+  const emojis = PARTICLES[action] || [];
+  if(emojis.length) spawnParticles(emojis);
+
+  // 某些動作結束後回到 idle
+  clearTimeout(animTimer);
+  if(['bow','jump','spin','clap','surprise'].includes(action)){
+    animTimer = setTimeout(() => {
+      charImg.className = 'anim-float';
+      charImg.src = ACTION_MAP.idle.img + '?v=' + Date.now();
+    }, 2000);
+  }
+}
+
+function spawnParticles(emojis){
+  for(let i=0;i<8;i++) setTimeout(()=>{
+    const p = document.createElement('div'); p.className='particle';
+    p.textContent = emojis[Math.floor(Math.random()*emojis.length)];
+    p.style.left   = (20+Math.random()*60)+'vw';
+    p.style.bottom = (20+Math.random()*40)+'vh';
+    p.style.animationDuration = (.7+Math.random()*.8)+'s';
+    document.body.appendChild(p);
+    setTimeout(()=>p.remove(), 1400);
+  }, i*100);
+}
+
+function renderScores(groups){
+  if(!groups || !groups.length){
+    scoreList.innerHTML='<div style="color:#888;font-size:.8rem;text-align:center">等待遊戲開始...</div>';
+    return;
+  }
+  const sorted = [...groups].sort((a,b)=>b.score-a.score);
+  scoreList.innerHTML = sorted.map((g,i)=>`
+    <div class="score-row" style="background:${g.color}20;">
+      <div class="s-dot" style="background:${g.color}"></div>
+      <div class="s-name" style="color:${g.color}">${g.name}</div>
+      <div class="s-num"  style="color:${g.color}">${g.score}</div>
+      <div class="s-rank">${i===0?'👑':i===1?'🥈':i===2?'🥉':''}</div>
+    </div>`).join('');
+}
+
+function showFlash(groupName, groupColor, rank, pts){
+  const rankTxt = rank===1?'🥇 第一個答對！':rank===2?'🥈 第二個！':'✅ 答對了！';
+  flashName.textContent = groupName;
+  flashName.style.color = groupColor;
+  flashPts.textContent  = `${rankTxt}  +${pts} 分`;
+  flash.style.background = groupColor+'22';
+  flash.classList.add('show');
+  setTimeout(()=>flash.classList.remove('show'), 2500);
+}
+
+// WebSocket
+let ws = null;
+function connect(){
+  const proto = location.protocol==='https:'?'wss://':'ws://';
+  ws = new WebSocket(proto + location.host + '/ws-main');
+  ws.onmessage = e => {
+    const msg = JSON.parse(e.data);
+    if(msg.type==='init'){
+      renderScores(msg.game.groups);
+      if(msg.game.question){ qHint.textContent=msg.game.question.label; qBox.classList.add('show'); }
+    }
+    if(msg.type==='scores') renderScores(msg.groups);
+    if(msg.type==='correct'){
+      doAction(msg.action);
+      showFlash(msg.groupName, msg.groupColor, msg.rank, msg.pts);
+    }
+    if(msg.type==='question'){
+      qHint.textContent = msg.label;
+      qBox.classList.add('show');
+      bubble.classList.remove('show');
+      doAction('idle');
+    }
+    if(msg.type==='question_end'){
+      qBox.classList.remove('show');
+      bubble.classList.remove('show');
+      doAction('idle');
+    }
+    if(msg.type==='game_started') renderScores(msg.groups);
+    if(msg.type==='game_reset'){
+      renderScores([]);
+      qBox.classList.remove('show');
+      bubble.classList.remove('show');
+      doAction('idle');
+    }
+    if(msg.type==='remote_count') connCount.textContent = msg.count;
+  };
+  ws.onclose = ()=>setTimeout(connect,2000);
+}
+
+connect();
+doAction('idle');
+bubbleJp.textContent  = 'こんにちは！';
+bubbleSub.textContent = '大家好！';
+bubble.classList.add('show');
+setTimeout(()=>bubble.classList.remove('show'), 3500);
+</script>
+</body>
+</html>

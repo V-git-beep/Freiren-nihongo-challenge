@@ -1,0 +1,271 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>老師控制台</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Noto+Sans+JP:wght@400;700&display=swap');
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'Noto Sans JP',sans-serif;background:#F3F4F6;min-height:100vh;padding:16px;}
+h1{font-size:1.2rem;font-weight:900;color:#1565C0;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+.card{background:white;border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 2px 8px rgba(0,0,0,.08);}
+.card-title{font-size:.75rem;font-weight:700;color:#888;margin-bottom:12px;letter-spacing:.06em;text-transform:uppercase;}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:6px;padding:10px 18px;border-radius:10px;border:none;font-size:.9rem;font-weight:700;cursor:pointer;transition:all .15s;font-family:inherit;}
+.btn:active{transform:scale(.96);}
+.btn-primary{background:#1565C0;color:white;box-shadow:0 3px 0 #0D47A1;}
+.btn-primary:active{box-shadow:0 1px 0 #0D47A1;}
+.btn-danger{background:#E53935;color:white;box-shadow:0 3px 0 #B71C1C;}
+.btn-success{background:#2E7D32;color:white;box-shadow:0 3px 0 #1B5E20;}
+.btn-gray{background:#e0e0e0;color:#333;box-shadow:0 3px 0 #bbb;}
+.btn-sm{padding:6px 12px;font-size:.8rem;}
+.btn:disabled{opacity:.4;cursor:not-allowed;transform:none;}
+
+/* Setup */
+#setup-section{}
+.group-count-row{display:flex;align-items:center;gap:10px;margin-bottom:14px;}
+.group-count-row label{font-weight:700;font-size:.9rem;}
+#group-count{width:60px;text-align:center;font-size:1.1rem;font-weight:700;border:2px solid #1565C0;border-radius:8px;padding:6px;}
+
+/* Questions grid */
+.q-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px;}
+.q-btn{padding:12px 8px;border-radius:12px;border:2px solid #e0e0e0;background:white;font-size:.85rem;font-weight:700;cursor:pointer;text-align:center;transition:all .15s;font-family:inherit;}
+.q-btn:hover{border-color:#1565C0;background:#E3F2FD;}
+.q-btn.active{border-color:#1565C0;background:#1565C0;color:white;}
+.q-btn:active{transform:scale(.96);}
+.q-jp{font-size:1.1rem;color:#E91E63;display:block;}
+.q-btn.active .q-jp{color:white;}
+.q-zh{font-size:.75rem;color:#888;margin-top:2px;display:block;}
+.q-btn.active .q-zh{color:rgba(255,255,255,.8);}
+
+/* Scoreboard */
+.score-row{display:flex;align-items:center;gap:10px;padding:10px;border-radius:10px;margin-bottom:6px;}
+.score-dot{width:12px;height:12px;border-radius:50%;flex-shrink:0;}
+.score-name{font-weight:700;flex:1;}
+.score-num{font-size:1.3rem;font-weight:900;min-width:40px;text-align:right;}
+.score-btns{display:flex;gap:4px;}
+
+/* Status */
+#status-bar{display:flex;align-items:center;gap:8px;padding:10px 14px;background:#E3F2FD;border-radius:10px;font-size:.85rem;color:#1565C0;font-weight:500;margin-bottom:14px;}
+#status-dot{width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0;}
+#status-dot.on{background:#22c55e;}
+.phase-lobby{color:#888;}
+.phase-playing{color:#1565C0;}
+
+/* QR */
+#qr-area{text-align:center;}
+#qr-area img{width:140px;height:140px;border-radius:8px;}
+#qr-url{font-size:.75rem;color:#888;margin-top:6px;word-break:break-all;}
+
+/* Active question banner */
+#active-q-banner{display:none;background:#E8F5E9;border:2px solid #2E7D32;border-radius:12px;padding:12px 16px;margin-bottom:10px;text-align:center;}
+#active-q-banner.show{display:block;}
+#active-q-text{font-size:1rem;font-weight:700;color:#2E7D32;}
+</style>
+</head>
+<body>
+
+<h1>🎮 老師控制台</h1>
+
+<div id="status-bar">
+  <div id="status-dot"></div>
+  <span id="status-msg">連線中...</span>
+  <span style="margin-left:auto">👥 <span id="conn-count">0</span> 人連線</span>
+</div>
+
+<!-- Setup -->
+<div class="card" id="setup-section">
+  <div class="card-title">⚙️ 遊戲設定</div>
+  <div class="group-count-row">
+    <label>分組數量：</label>
+    <button class="btn btn-gray btn-sm" onclick="changeGroupCount(-1)">－</button>
+    <input id="group-count" type="number" value="4" min="2" max="6" readonly>
+    <button class="btn btn-gray btn-sm" onclick="changeGroupCount(1)">＋</button>
+  </div>
+  <button class="btn btn-primary" id="start-btn" onclick="startGame()" style="width:100%">🚀 開始遊戲</button>
+</div>
+
+<!-- Active question banner -->
+<div id="active-q-banner">
+  <div style="font-size:.8rem;color:#666;margin-bottom:4px;">目前題目</div>
+  <div id="active-q-text">—</div>
+  <button class="btn btn-danger btn-sm" style="margin-top:10px;width:100%" onclick="endQuestion()">⏹ 結束這題</button>
+</div>
+
+<!-- Questions -->
+<div class="card" id="question-section" style="display:none">
+  <div class="card-title">🎯 出題（點選後學生開始搶答）</div>
+  <div class="q-grid" id="q-grid"></div>
+</div>
+
+<!-- Scoreboard -->
+<div class="card" id="score-section" style="display:none">
+  <div class="card-title">🏆 分數管理</div>
+  <div id="score-list"></div>
+  <button class="btn btn-danger btn-sm" style="margin-top:10px" onclick="resetGame()">🔄 重新開始</button>
+</div>
+
+<!-- QR Code -->
+<div class="card">
+  <div class="card-title">📱 學生 QR Code</div>
+  <div id="qr-area">
+    <div style="color:#aaa;font-size:.85rem">開始遊戲後，各組 QR Code 將顯示在這裡</div>
+  </div>
+</div>
+
+<script>
+const QUESTIONS = [
+  {action:'stand',   jp:'たって',        zh:'站起來'},
+  {action:'sit',     jp:'すわって',      zh:'坐下'},
+  {action:'bow',     jp:'おじぎ',        zh:'鞠躬'},
+  {action:'wave',    jp:'ふって',        zh:'揮手'},
+  {action:'laugh',   jp:'わらって',      zh:'笑'},
+  {action:'cry',     jp:'ないて',        zh:'哭'},
+  {action:'jump',    jp:'ジャンプ',      zh:'跳'},
+  {action:'spin',    jp:'まわって',      zh:'轉圈'},
+  {action:'clap',    jp:'てをたたいて',  zh:'拍手'},
+  {action:'surprise',jp:'びっくり',      zh:'嚇一跳'},
+  {action:'angry',   jp:'おこって',      zh:'生氣'},
+  {action:'dance',   jp:'ダンス',        zh:'跳舞'},
+  {action:'sleep',   jp:'ねて',          zh:'睡覺'},
+  {action:'excited', jp:'やった',        zh:'好興奮'},
+];
+
+let currentGroups = [];
+let activeAction  = null;
+let ws = null;
+
+function changeGroupCount(d){
+  const el = document.getElementById('group-count');
+  el.value = Math.max(2, Math.min(6, parseInt(el.value)+d));
+}
+
+function startGame(){
+  const count = parseInt(document.getElementById('group-count').value);
+  send({type:'start_game', groupCount:count});
+}
+
+function startQuestion(action, jp, zh){
+  if(activeAction) return; // already a question running
+  activeAction = action;
+  document.querySelectorAll('.q-btn').forEach(b=>b.classList.remove('active'));
+  document.querySelector(`.q-btn[data-action="${action}"]`)?.classList.add('active');
+  const banner = document.getElementById('active-q-banner');
+  document.getElementById('active-q-text').textContent = `讓人物做出「${zh}」的動作！（日文：${jp}）`;
+  banner.classList.add('show');
+  send({type:'set_question', action, label:`讓人物做出「${zh}」的動作！`});
+}
+
+function endQuestion(){
+  activeAction = null;
+  document.querySelectorAll('.q-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('active-q-banner').classList.remove('show');
+  send({type:'end_question'});
+}
+
+function adjustScore(groupId, delta){
+  send({type:'adjust_score', groupId, delta});
+}
+
+function resetGame(){
+  if(!confirm('確定要重新開始嗎？分數將歸零。')) return;
+  activeAction = null;
+  send({type:'reset_game'});
+}
+
+function send(obj){
+  if(ws && ws.readyState===1) ws.send(JSON.stringify(obj));
+}
+
+function buildQGrid(){
+  const grid = document.getElementById('q-grid');
+  grid.innerHTML = QUESTIONS.map(q=>`
+    <button class="q-btn" data-action="${q.action}" onclick="startQuestion('${q.action}','${q.jp}','${q.zh}')">
+      <span class="q-jp">${q.jp}</span>
+      <span class="q-zh">${q.zh}</span>
+    </button>
+  `).join('');
+}
+
+function renderScores(groups){
+  currentGroups = groups;
+  const list = document.getElementById('score-list');
+  if(!groups || !groups.length){ list.innerHTML=''; return; }
+  const sorted = [...groups].sort((a,b)=>b.score-a.score);
+  list.innerHTML = sorted.map((g,i)=>`
+    <div class="score-row" style="background:${g.color}18">
+      <div class="score-dot" style="background:${g.color}"></div>
+      <div class="score-name" style="color:${g.color}">${i===0?'👑 ':''}${g.name}</div>
+      <div class="score-num" style="color:${g.color}">${g.score} 分</div>
+      <div class="score-btns">
+        <button class="btn btn-gray btn-sm" onclick="adjustScore(${g.id},-1)" title="扣分">－</button>
+        <button class="btn btn-gray btn-sm" onclick="adjustScore(${g.id},1)" title="補分">＋</button>
+      </div>
+    </div>
+  `).join('') + '<div style="font-size:11px;color:#aaa;margin-top:8px;text-align:center">分數自動計算（最快答對+2分，其餘+1分）<br>手動±為緊急調整用</div>';
+}
+
+function renderQR(groups){
+  const area = document.getElementById('qr-area');
+  if(!groups || !groups.length){ area.innerHTML='<div style="color:#aaa;font-size:.85rem">開始遊戲後，各組 QR Code 將顯示在這裡</div>'; return; }
+  const base = location.origin + '/remote?group=';
+  area.innerHTML = groups.map(g=>`
+    <div style="display:inline-block;margin:6px;text-align:center;">
+      <div style="font-weight:700;color:${g.color};margin-bottom:4px;">${g.name}</div>
+      <img src="https://api.qrserver.com/v1/create-qr-code/?size=120x120&data=${encodeURIComponent(base+g.id)}" alt="QR">
+      <div style="font-size:.65rem;color:#aaa;margin-top:3px;max-width:120px;word-break:break-all;">${base+g.id}</div>
+    </div>
+  `).join('');
+}
+
+function setActiveQ(action, label){
+  activeAction = action;
+  document.querySelectorAll('.q-btn').forEach(b=>b.classList.toggle('active',b.dataset.action===action));
+  document.getElementById('ab-text').textContent = label;
+  document.getElementById('active-banner').classList.add('show');
+}
+function clearActiveQ(){
+  activeAction = null;
+  document.querySelectorAll('.q-btn').forEach(b=>b.classList.remove('active'));
+  document.getElementById('active-banner').classList.remove('show');
+}
+function applyState(s){
+  const isPlaying = s.phase === 'playing';
+  document.getElementById('setup-section').style.display = isPlaying ? 'none' : '';
+  document.getElementById('question-section').style.display = isPlaying ? '' : 'none';
+  document.getElementById('score-section').style.display = isPlaying ? '' : 'none';
+  if(isPlaying) renderScores(s.groups);
+  if(isPlaying) renderQR(s.groups);
+  if(!s.currentQuestion){ endQuestion(); }
+}
+
+// WebSocket
+function connect(){
+  const proto = location.protocol==='https:'?'wss://':'ws://';
+  ws = new WebSocket(proto + location.host + '/ws-admin');
+  ws.onopen = ()=>{
+    document.getElementById('status-dot').className='on';
+    document.getElementById('status-msg').textContent='已連線 ✓';
+  };
+  ws.onmessage = e=>{
+    const msg = JSON.parse(e.data);
+    if(msg.type==='init')        applyState(msg.game);
+    if(msg.type==='scores')      renderScores(msg.groups);
+    if(msg.type==='game_started'){ applyState({phase:'playing', groups:msg.groups, question:null, answered:[]}); }
+    if(msg.type==='game_reset')  applyState({phase:'lobby', groups:[], question:null, answered:[]});
+    if(msg.type==='question')    setActiveQ(msg.action, msg.label);
+    if(msg.type==='question_end') clearActiveQ();
+    if(msg.type==='remote_count') document.getElementById('ad-conn').textContent=msg.count;
+  };
+  ws.onclose = ()=>{
+    document.getElementById('status-dot').className='';
+    document.getElementById('status-msg').textContent='斷線，重連中...';
+    setTimeout(connect,2000);
+  };
+}
+
+buildQGrid();
+connect();
+</script>
+</body>
+</html>
