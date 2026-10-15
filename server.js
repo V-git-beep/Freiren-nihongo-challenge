@@ -67,8 +67,8 @@ const game = {
   answered: [],     // group ids that already scored this round
 };
 
-const GROUP_NAMES  = ['', '紅隊', '藍隊', '綠隊', '橙隊', '紫隊', '青隊'];
-const GROUP_COLORS = ['', '#E53935', '#1E88E5', '#43A047', '#FB8C00', '#8E24AA', '#00ACC1'];
+const GROUP_NAMES  = ['', '紅隊', '藍隊', '綠隊', '橙隊', '紫隊', '青隊', '粉隊'];
+const GROUP_COLORS = ['', '#E53935', '#1E88E5', '#43A047', '#FB8C00', '#8E24AA', '#00ACC1', '#F06292'];
 
 let mainSocket  = null;
 let adminSocket = null;
@@ -170,7 +170,7 @@ function publicGame() {
 // ── Admin message handler ──────────────────────────────────────────────────────
 function handleAdmin(msg) {
   if (msg.type === 'start_game') {
-    const count = Math.max(2, Math.min(6, parseInt(msg.groupCount) || 4));
+    const count = Math.max(2, Math.min(7, parseInt(msg.groupCount) || 4));
     game.groups = Array.from({ length: count }, (_, i) => ({
       id: i + 1, name: GROUP_NAMES[i + 1], color: GROUP_COLORS[i + 1], score: 0,
     }));
